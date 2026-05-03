@@ -6,8 +6,11 @@ MCP server exposing **Japan-specific utilities** to AI agents (Claude, Cursor, C
 - 🔤 **Kanji → Hepburn romaji** — `山田太郎` → `yamada tarou`
 - 📮 **Postal code lookup** — `150-0001` → `東京都 渋谷区 神宮前`
 - 🎌 **National holiday calendar** — is `2026-05-03` a holiday? what about all of 2026?
+- 🅰️ **Kana conversion** — hiragana ↔ katakana ↔ half-width katakana
+- 📏 **Width normalization** — full-width (全角) ↔ half-width (半角) for ASCII, digits, kana
+- 👤 **Name splitting** — `山田太郎` → surname `山田` + given `太郎` (statistical model)
 
-Built on top of well-maintained Japanese libraries (`jpholiday`, `posuto`, `pykakasi`) — wrapped as MCP tools so any AI agent can call them without re-implementing reading rules, era arithmetic, or postal data.
+Built on top of well-maintained Japanese libraries (`jpholiday`, `posuto`, `pykakasi`, `jaconv`, `namedivider-python`) — wrapped as MCP tools so any AI agent can call them without re-implementing reading rules, era arithmetic, postal data, or name-splitting heuristics.
 
 ## Why this exists
 
@@ -30,6 +33,9 @@ This MCP gives them a deterministic answer.
 | `lookup_postal_code` | 7-digit JP postal code → prefecture / city / area, with kana readings |
 | `is_holiday` | Date string → is it a national holiday? + Japanese name + weekday |
 | `list_holidays` | Year → all national holidays for that year |
+| `convert_kana` | hiragana ↔ katakana ↔ half-width katakana, any direction |
+| `normalize_width` | Full-width ↔ half-width for ASCII, digits, kana (with per-category control) |
+| `split_japanese_name` | Japanese full name → surname + given name (statistical model with confidence) |
 
 All tools return structured JSON. See tool docstrings in `src/japan_utils_mcp/server.py` for full schemas and examples.
 
@@ -95,6 +101,15 @@ Once connected, ask your agent things like:
 
 > **List all Japanese holidays in 2026.**
 > → `list_holidays(2026)` → 18 holidays with names and dates
+
+> **Convert ヤマダタロウ to hiragana.**
+> → `convert_kana("ヤマダタロウ", "hiragana")` → `やまだたろう`
+
+> **Normalize ＡＢＣ１２３ to half-width.**
+> → `normalize_width("ＡＢＣ１２３", "to_half")` → `ABC123`
+
+> **Split 長谷川健太 into surname and given name.**
+> → `split_japanese_name("長谷川健太")` → `長谷川` / `健太`
 
 ## Caveats
 

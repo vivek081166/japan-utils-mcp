@@ -7,6 +7,9 @@ Tools provided:
     - lookup_postal_code: 7-digit Japanese 郵便番号 → prefecture/city/area
     - is_holiday:        check whether a given date is a Japanese national holiday
     - list_holidays:     list all national holidays for a given year
+    - convert_kana:      hiragana ↔ katakana (full-width and half-width)
+    - normalize_width:   half-width (半角) ↔ full-width (全角)
+    - split_japanese_name: split a Japanese full name into surname + given name
 """
 
 from __future__ import annotations
@@ -15,10 +18,12 @@ import re
 from datetime import date, datetime
 from typing import Any
 
+import jaconv  # type: ignore[import-untyped]
 import jpholiday  # type: ignore[import-untyped]
 import posuto  # type: ignore[import-untyped]
 import pykakasi  # type: ignore[import-untyped]
 from mcp.server.fastmcp import FastMCP
+from namedivider import BasicNameDivider  # type: ignore[import-untyped]
 
 mcp = FastMCP("japan-utils")
 
@@ -369,6 +374,174 @@ def list_holidays(year: int) -> dict[str, Any]:
         "year": year,
         "count": len(holidays),
         "holidays": holidays,
+    }
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Kana conversion
+# ──────────────────────────────────────────────────────────────────────
+
+
+@mcp.tool()
+def convert_kana(text: str, to: str) -> dict[str, Any]:
+    """Convert between hiragana, katakana, and half-width katakana.
+
+    Args:
+        text: Input string. Mix of hiragana, katakana, kanji, ASCII is fine —
+            non-target characters pass through unchanged.
+        to: Target script. One of:
+            - 'hiragana'  : ひらがな (e.g. ヤマダ → やまだ)
+            - 'katakana'  : カタカナ (full-width) (e.g. やまだ → ヤマダ)
+            - 'half_kana' : ﾊﾝｶｸｶﾀｶﾅ (half-width katakana) (e.g. ヤマダ → ﾔﾏﾀﾞ)
+            - 'full_kana' : ヤマダ (half-width → full-width katakana)
+
+    Returns:
+        dict with keys:
+            - input: str
+            - output: str
+            - to: str
+
+    Examples:
+        convert_kana("ヤマダタロウ", "hiragana") → "やまだたろう"
+        convert_kana("やまだたろう", "katakana") → "ヤマダタロウ"
+        convert_kana("ヤマダ", "half_kana") → "ﾔﾏﾀﾞ"
+        convert_kana("ﾔﾏﾀﾞ", "full_kana") → "ヤマダ"
+    """
+    target = to.strip().lower()
+
+    if target in ("hiragana", "hira", "h"):
+        # Half-width katakana → full-width katakana → hiragana
+        normalized = jaconv.h2z(text, kana=True)
+        out = jaconv.kata2hira(normalized)
+    elif target in ("katakana", "kata", "k", "full_katakana"):
+        normalized = jaconv.h2z(text, kana=True)
+        out = jaconv.hira2kata(normalized)
+    elif target in ("half_kana", "halfwidth_kana", "hankaku"):
+        # Convert hiragana → katakana → half-width
+        full = jaconv.hira2kata(text)
+        out = jaconv.z2h(full, kana=True, digit=False, ascii=False)
+    elif target in ("full_kana", "fullwidth_kana", "zenkaku"):
+        out = jaconv.h2z(text, kana=True, digit=False, ascii=False)
+    else:
+        raise ValueError(
+            f"Unknown 'to' value: {to!r}. "
+            "Use 'hiragana', 'katakana', 'half_kana', or 'full_kana'."
+        )
+
+    return {"input": text, "output": out, "to": target}
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Width normalization
+# ──────────────────────────────────────────────────────────────────────
+
+
+@mcp.tool()
+def normalize_width(text: str, mode: str = "to_full") -> dict[str, Any]:
+    """Convert between half-width (半角) and full-width (全角) characters.
+
+    Args:
+        text: Input string.
+        mode: Conversion direction. One of:
+            - 'to_full' : half-width → full-width for all categories (kana, ascii, digits)
+            - 'to_half' : full-width → half-width for all categories
+            - 'to_full_ascii_only' : convert only ASCII letters and digits to full-width,
+                                       leave kana untouched
+            - 'to_half_ascii_only' : convert only full-width ASCII to half-width
+            - 'to_full_kana_only'  : convert only half-width katakana to full-width
+            - 'to_half_kana_only'  : convert only full-width katakana to half-width
+
+    Returns:
+        dict with keys:
+            - input: str
+            - output: str
+            - mode: str
+
+    Examples:
+        normalize_width("ＡＢＣ１２３", "to_half") → "ABC123"
+        normalize_width("ABC123", "to_full") → "ＡＢＣ１２３"
+        normalize_width("ｶﾀｶﾅ", "to_full") → "カタカナ"
+    """
+    m = mode.strip().lower()
+
+    if m == "to_full":
+        out = jaconv.h2z(text, kana=True, digit=True, ascii=True)
+    elif m == "to_half":
+        out = jaconv.z2h(text, kana=True, digit=True, ascii=True)
+    elif m == "to_full_ascii_only":
+        out = jaconv.h2z(text, kana=False, digit=True, ascii=True)
+    elif m == "to_half_ascii_only":
+        out = jaconv.z2h(text, kana=False, digit=True, ascii=True)
+    elif m == "to_full_kana_only":
+        out = jaconv.h2z(text, kana=True, digit=False, ascii=False)
+    elif m == "to_half_kana_only":
+        out = jaconv.z2h(text, kana=True, digit=False, ascii=False)
+    else:
+        raise ValueError(
+            f"Unknown mode: {mode!r}. "
+            "Use 'to_full', 'to_half', or one of the *_only variants."
+        )
+
+    return {"input": text, "output": out, "mode": m}
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Name splitting
+# ──────────────────────────────────────────────────────────────────────
+
+_name_divider: BasicNameDivider | None = None
+
+
+def _get_name_divider() -> BasicNameDivider:
+    global _name_divider
+    if _name_divider is None:
+        _name_divider = BasicNameDivider()
+    return _name_divider
+
+
+@mcp.tool()
+def split_japanese_name(full_name: str) -> dict[str, Any]:
+    """Split a Japanese full name into surname (姓) and given name (名).
+
+    Uses a kanji-feature-based statistical model (`namedivider-python`).
+
+    Args:
+        full_name: Japanese full name written in kanji, with no separator
+            (e.g. '山田太郎', '長谷川健太'). Names with existing separators
+            (space, comma) are also accepted — the separator will be re-detected.
+
+    Returns:
+        dict with keys:
+            - input: str
+            - family: str (姓 — surname)
+            - given: str (名 — given name)
+            - confidence: float (0.0–1.0; higher = more confident split)
+            - algorithm: str (which underlying algorithm produced the split)
+
+    Examples:
+        split_japanese_name("山田太郎") → {"family": "山田", "given": "太郎", ...}
+        split_japanese_name("長谷川健太") → {"family": "長谷川", "given": "健太", ...}
+        split_japanese_name("佐藤花子") → {"family": "佐藤", "given": "花子", ...}
+
+    Caveats:
+        - Statistical model — not 100% accurate, especially for unusual names
+          or non-traditional name compositions.
+        - Confidence < 0.5 indicates an ambiguous split; treat with caution.
+        - Single-kanji surnames + single-kanji given names (e.g. '林修') are
+          fundamentally ambiguous without external context.
+    """
+    cleaned = full_name.strip().replace(" ", "").replace("　", "").replace(",", "")
+    if not cleaned:
+        raise ValueError("full_name cannot be empty.")
+
+    divider = _get_name_divider()
+    result = divider.divide_name(cleaned)
+    return {
+        "input": full_name,
+        "family": result.family,
+        "given": result.given,
+        "confidence": float(result.score),
+        "algorithm": result.algorithm,
     }
 
 
