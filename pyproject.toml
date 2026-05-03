@@ -1,0 +1,39 @@
+[project]
+name = "japan-utils-mcp"
+version = "0.1.0"
+description = "MCP server exposing Japan-specific utilities (era conversion, romaji, holidays, postal codes) to AI agents."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [
+    { name = "japan-utils-mcp contributors" }
+]
+keywords = ["mcp", "japan", "japanese", "romaji", "postal-code", "holidays", "era", "claude"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: Japanese",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Utilities",
+]
+requires-python = ">=3.13"
+dependencies = [
+    "jpholiday>=1.0.3",
+    "mcp>=1.27.0",
+    "posuto>=2026.5.0",
+    "pykakasi>=2.3.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/vivek081166/japan-utils-mcp"
+Repository = "https://github.com/vivek081166/japan-utils-mcp"
+Issues = "https://github.com/vivek081166/japan-utils-mcp/issues"
+
+[project.scripts]
+japan-utils-mcp = "japan_utils_mcp:main"
+
+[build-system]
+requires = ["uv_build>=0.8.2,<0.9.0"]
+build-backend = "uv_build"
