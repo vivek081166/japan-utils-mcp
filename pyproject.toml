@@ -1,6 +1,6 @@
 [project]
 name = "japan-utils-mcp"
-version = "0.1.0"
+version = "0.1.1"
 description = "MCP server exposing Japan-specific utilities (era conversion, romaji, holidays, postal codes) to AI agents."
 readme = "README.md"
 license = { text = "MIT" }

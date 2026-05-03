@@ -1,5 +1,7 @@
 # japan-utils-mcp
 
+<!-- mcp-name: io.github.vivek081166/japan-utils-mcp -->
+
 [![PyPI](https://img.shields.io/pypi/v/japan-utils-mcp.svg)](https://pypi.org/project/japan-utils-mcp/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
