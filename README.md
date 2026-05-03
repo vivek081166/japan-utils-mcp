@@ -1,5 +1,8 @@
 # japan-utils-mcp
 
+[![PyPI](https://img.shields.io/pypi/v/japan-utils-mcp.svg)](https://pypi.org/project/japan-utils-mcp/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 MCP server exposing **Japan-specific utilities** to AI agents (Claude, Cursor, Cline, Continue, etc.). Hand your agent the small bag of JP-specific functions every Japan-related task needs but no generic LLM gets right reliably:
 
 - 🗓️ **Era ↔ Western year** — `令和8年` ↔ `2026`
@@ -41,13 +44,15 @@ All tools return structured JSON. See tool docstrings in `src/japan_utils_mcp/se
 
 ## Installation
 
-### Run with `uvx` (no install — recommended once published)
+### Run with `uvx` (no install — recommended)
 
 ```bash
 uvx japan-utils-mcp
 ```
 
-### From source (today)
+That's it. `uvx` (from [`uv`](https://docs.astral.sh/uv/)) handles install + run in one shot, isolated from your global Python.
+
+### From source
 
 ```bash
 git clone https://github.com/vivek081166/japan-utils-mcp.git
